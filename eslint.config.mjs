@@ -1,1 +1,1 @@
-export default [];
+import eslintConfigNext from 'eslint-config-next/core-web-vitals.js'

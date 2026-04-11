@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 type Entreprise = {
@@ -24,6 +24,11 @@ type Avis = {
   titre: string
   commentaire: string
   created_at: string
+}
+
+type User = {
+  email?: string
+  user_metadata?: { nom?: string }
 }
 
 function EtoilesNote({ note, size = 'md' }: { note: number, size?: 'sm' | 'md' | 'lg' }) {
@@ -70,14 +75,20 @@ function BadgeNote({ note }: { note: number }) {
 
 export default function EntreprisePage() {
   const { id } = useParams()
+  const router = useRouter()
   const [entreprise, setEntreprise] = useState<Entreprise | null>(null)
   const [avis, setAvis] = useState<Avis[]>([])
   const [loading, setLoading] = useState(true)
   const [note, setNote] = useState(0)
   const [envoi, setEnvoi] = useState(false)
   const [succes, setSucces] = useState(false)
+  const [user, setUser] = useState<User | null>(null)
 
-  useEffect(() => { fetchData() }, [id])
+  useEffect(() => {
+    fetchData()
+    supabase.auth.getUser().then(({ data }) => setUser(data.user))
+    supabase.auth.onAuthStateChange((_e, session) => setUser(session?.user ?? null))
+  }, [id])
 
   async function fetchData() {
     const { data: ent } = await supabase
@@ -92,6 +103,10 @@ export default function EntreprisePage() {
 
   async function soumettreAvis(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    if (!user) {
+      router.push('/auth')
+      return
+    }
     if (note === 0) return alert('Veuillez choisir une note')
     setEnvoi(true)
     const form = e.currentTarget
@@ -99,7 +114,7 @@ export default function EntreprisePage() {
 
     await supabase.from('avis').insert({
       entreprise_id: id,
-      auteur_nom: formData.get('auteur_nom'),
+      auteur_nom: user.user_metadata?.nom || user.email || 'Anonyme',
       note,
       titre: formData.get('titre'),
       commentaire: formData.get('commentaire'),
@@ -113,7 +128,6 @@ export default function EntreprisePage() {
     fetchData()
   }
 
-  // Distribution des notes
   function distributionNotes() {
     const dist: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
     avis.forEach(a => dist[a.note] = (dist[a.note] || 0) + 1)
@@ -129,7 +143,9 @@ export default function EntreprisePage() {
   if (!entreprise) return (
     <div className="text-center py-16">
       <p className="text-gray-500">Entreprise introuvable</p>
-      <Link href="/" style={{ color: '#1a7a3c' }} className="mt-4 inline-block hover:underline">← Retour à l'accueil</Link>
+      <Link href="/" style={{ color: '#1a7a3c' }} className="mt-4 inline-block hover:underline">
+        Retour
+      </Link>
     </div>
   )
 
@@ -137,11 +153,11 @@ export default function EntreprisePage() {
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      {/* Header entreprise */}
+      {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #1a7a3c 0%, #0f5228 100%)' }} className="text-white py-12">
         <div className="max-w-4xl mx-auto px-4">
           <Link href="/" className="text-green-300 hover:text-white text-sm mb-6 inline-block">
-            ← Retour à l'accueil
+            Retour
           </Link>
           <div className="flex items-start gap-6">
             <div style={{ backgroundColor: '#c9a832' }} className="w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-bold text-white shadow-lg flex-shrink-0">
@@ -154,7 +170,9 @@ export default function EntreprisePage() {
                   {entreprise.secteur}
                 </span>
               </div>
-              <p className="text-green-200 mb-4">📍 {entreprise.ville}{entreprise.adresse ? ` • ${entreprise.adresse}` : ''}</p>
+              <p className="text-green-200 mb-4">
+                {entreprise.ville}{entreprise.adresse ? ` • ${entreprise.adresse}` : ''}
+              </p>
               <div className="flex items-center gap-4 flex-wrap">
                 <EtoilesNote note={entreprise.note_moyenne || 0} size="lg" />
                 <span className="text-3xl font-bold">{entreprise.note_moyenne?.toFixed(1) || '0.0'}</span>
@@ -162,17 +180,13 @@ export default function EntreprisePage() {
               </div>
             </div>
           </div>
-
-          {/* Infos contact */}
           {(entreprise.telephone || entreprise.site_web) && (
             <div className="flex gap-4 mt-6 flex-wrap">
-              {entreprise.telephone && (
-                <span className="text-green-200 text-sm">📞 {entreprise.telephone}</span>
-              )}
+              {entreprise.telephone && <span className="text-green-200 text-sm">{entreprise.telephone}</span>}
               {entreprise.site_web && (
                 <a href={entreprise.site_web} target="_blank" rel="noopener noreferrer"
                   style={{ color: '#c9a832' }} className="text-sm hover:underline">
-                  🌐 Site web →
+                  Site web
                 </a>
               )}
             </div>
@@ -184,16 +198,13 @@ export default function EntreprisePage() {
 
         {/* Colonne gauche */}
         <div className="md:col-span-1 space-y-6">
-
-          {/* Description */}
           <div className="bg-white rounded-xl shadow-sm p-6">
-            <h3 className="font-bold text-gray-700 mb-3">À propos</h3>
+            <h3 className="font-bold text-gray-700 mb-3">A propos</h3>
             <p className="text-gray-600 text-sm leading-relaxed">{entreprise.description || 'Aucune description.'}</p>
           </div>
 
-          {/* Distribution notes */}
           <div className="bg-white rounded-xl shadow-sm p-6">
-            <h3 className="font-bold text-gray-700 mb-4">Répartition des notes</h3>
+            <h3 className="font-bold text-gray-700 mb-4">Repartition des notes</h3>
             {[5, 4, 3, 2, 1].map(n => (
               <div key={n} className="flex items-center gap-2 mb-2">
                 <span className="text-sm w-4 text-gray-600">{n}</span>
@@ -218,71 +229,91 @@ export default function EntreprisePage() {
 
           {/* Formulaire avis */}
           <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-xl font-bold mb-5" style={{ color: '#1a7a3c' }}>✍️ Laisser un avis</h2>
+            <h2 className="text-xl font-bold mb-5" style={{ color: '#1a7a3c' }}>
+              Laisser un avis
+            </h2>
 
-            {succes && (
-              <div style={{ backgroundColor: '#e8f5ee', color: '#1a7a3c' }} className="p-4 rounded-lg mb-4 font-medium">
-                ✅ Merci ! Votre avis a été publié.
+            {!user ? (
+              <div style={{ backgroundColor: '#e8f5ee' }} className="rounded-xl p-6 text-center">
+                <p className="text-gray-600 mb-4">
+                  Connectez-vous pour laisser un avis
+                </p>
+                <Link
+                  href="/auth"
+                  style={{ backgroundColor: '#1a7a3c' }}
+                  className="inline-block text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition"
+                >
+                  Se connecter
+                </Link>
+                <p className="text-sm text-gray-400 mt-3">
+                  Pas de compte ?{' '}
+                  <Link href="/auth" style={{ color: '#1a7a3c' }} className="font-medium hover:underline">
+                    Inscription gratuite
+                  </Link>
+                </p>
               </div>
+            ) : (
+              <>
+                {succes && (
+                  <div style={{ backgroundColor: '#e8f5ee', color: '#1a7a3c' }} className="p-4 rounded-lg mb-4 font-medium">
+                    Merci ! Votre avis a ete publie.
+                  </div>
+                )}
+
+                <div style={{ backgroundColor: '#f0fdf4' }} className="rounded-lg p-3 mb-4 flex items-center gap-2">
+                  <div style={{ backgroundColor: '#1a7a3c', color: 'white' }} className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm">
+                    {(user.user_metadata?.nom || user.email || 'U').charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-sm text-gray-600">
+                    Vous publiez en tant que <strong>{user.user_metadata?.nom || user.email}</strong>
+                  </span>
+                </div>
+
+                <form onSubmit={soumettreAvis} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Votre note *</label>
+                    <EtoilesSelecteur value={note} onChange={setNote} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Titre *</label>
+                    <input
+                      name="titre"
+                      required
+                      placeholder="Resumez votre experience"
+                      className="w-full border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Commentaire *</label>
+                    <textarea
+                      name="commentaire"
+                      required
+                      rows={4}
+                      placeholder="Decrivez votre experience..."
+                      className="w-full border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none text-sm resize-none"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={envoi}
+                    style={{ backgroundColor: '#1a7a3c' }}
+                    className="w-full text-white py-3 rounded-lg font-semibold hover:opacity-90 transition disabled:opacity-50"
+                  >
+                    {envoi ? 'Publication...' : 'Publier mon avis'}
+                  </button>
+                </form>
+              </>
             )}
-
-            <form onSubmit={soumettreAvis} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Votre note *</label>
-                <EtoilesSelecteur value={note} onChange={setNote} />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Votre nom *</label>
-                <input
-                  name="auteur_nom"
-                  required
-                  placeholder="Ex: Kouassi Jean"
-                  className="w-full border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 text-sm"
-                  style={{ '--tw-ring-color': '#1a7a3c' } as React.CSSProperties}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Titre *</label>
-                <input
-                  name="titre"
-                  required
-                  placeholder="Résumez votre expérience"
-                  className="w-full border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Commentaire *</label>
-                <textarea
-                  name="commentaire"
-                  required
-                  rows={4}
-                  placeholder="Décrivez votre expérience avec cette entreprise..."
-                  className="w-full border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none text-sm resize-none"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={envoi}
-                style={{ backgroundColor: '#1a7a3c' }}
-                className="w-full text-white py-3 rounded-lg font-semibold hover:opacity-90 transition disabled:opacity-50"
-              >
-                {envoi ? 'Publication...' : 'Publier mon avis'}
-              </button>
-            </form>
           </div>
 
           {/* Liste avis */}
           <div>
-            <h2 className="text-xl font-bold mb-4">💬 Avis clients ({avis.length})</h2>
+            <h2 className="text-xl font-bold mb-4">Avis clients ({avis.length})</h2>
             {avis.length === 0 ? (
               <div className="bg-white rounded-xl shadow-sm p-8 text-center text-gray-400">
                 <p className="text-4xl mb-3">💬</p>
                 <p>Aucun avis pour le moment.</p>
-                <p className="text-sm mt-1">Soyez le premier à partager votre expérience !</p>
+                <p className="text-sm mt-1">Soyez le premier !</p>
               </div>
             ) : (
               <div className="space-y-4">
