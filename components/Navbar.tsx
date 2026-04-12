@@ -30,13 +30,14 @@ export default function Navbar() {
             <Image
               src="/logo.png"
               alt="AvisCI"
-              width={120}
-              height={40}
+              width={160}
+              height={55}
               className="object-contain"
               priority
             />
           </Link>
 
+          {/* Menu desktop */}
           <div className="hidden md:flex items-center space-x-4">
             <Link href="/" style={{ color: '#212E53' }} className="hover:opacity-70 text-sm font-medium transition">
               Accueil
@@ -44,16 +45,23 @@ export default function Navbar() {
             <Link href="/stats" style={{ color: '#212E53' }} className="hover:opacity-70 text-sm font-medium transition">
               Statistiques
             </Link>
+            <Link href="/carte" style={{ color: '#212E53' }} className="hover:opacity-70 text-sm font-medium transition">
+              🗺️ Carte
+            </Link>
             <Link href="/ajouter" style={{ backgroundColor: '#212E53', color: '#ECF8F6' }} className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition">
               + Ajouter une entreprise
             </Link>
             {user ? (
               <div className="flex items-center space-x-3">
-                <span style={{ color: '#212E53' }} className="text-sm font-medium">
-                  {user.user_metadata?.nom || user.email}
-                </span>
+                <Link
+                  href="/profil"
+                  style={{ color: '#212E53' }}
+                  className="text-sm font-medium hover:opacity-70 transition"
+                >
+                  👤 {user.user_metadata?.nom || 'Mon profil'}
+                </Link>
                 <button onClick={deconnexion} className="text-red-400 hover:text-red-600 text-sm transition">
-                  Deconnexion
+                  Déconnexion
                 </button>
               </div>
             ) : (
@@ -74,13 +82,16 @@ export default function Navbar() {
           <div className="md:hidden mt-2 pb-3 space-y-2 border-t pt-3" style={{ borderColor: '#212E53' }}>
             <Link href="/" style={{ color: '#212E53' }} className="block py-2 text-sm font-medium">Accueil</Link>
             <Link href="/stats" style={{ color: '#212E53' }} className="block py-2 text-sm font-medium">Statistiques</Link>
+            <Link href="/carte" style={{ color: '#212E53' }} className="block py-2 text-sm font-medium">🗺️ Carte</Link>
             <Link href="/ajouter" style={{ color: '#212E53' }} className="block py-2 text-sm font-semibold">
               + Ajouter une entreprise
             </Link>
             {user ? (
               <div>
-                <span style={{ color: '#212E53' }} className="block text-sm py-2">{user.user_metadata?.nom || user.email}</span>
-                <button onClick={deconnexion} className="block text-red-400 py-2 text-sm">Deconnexion</button>
+                <Link href="/profil" style={{ color: '#212E53' }} className="block py-2 text-sm font-medium">
+                  👤 {user.user_metadata?.nom || 'Mon profil'}
+                </Link>
+                <button onClick={deconnexion} className="block text-red-400 py-2 text-sm">Déconnexion</button>
               </div>
             ) : (
               <Link href="/auth" style={{ color: '#212E53' }} className="block py-2 text-sm font-medium">Connexion</Link>
