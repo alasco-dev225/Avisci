@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
 
 // Important : charger la carte sans SSR
 const MapEntreprises = dynamic(() => import('@/components/MapEntreprises'), { ssr: false })
@@ -54,6 +55,16 @@ export default function CartePage() {
       setFiltered(entreprises.filter(e => e.latitude && e.longitude))
     }
   }, [entreprises, userPosition, rayon])
+
+  const prochesAvecDistance = userPosition
+    ? filtered
+        .map((entreprise) => ({
+          ...entreprise,
+          distance: distance(userPosition[0], userPosition[1], entreprise.latitude, entreprise.longitude),
+        }))
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, 8)
+    : []
 
   function localiser() {
     setLocating(true)
@@ -128,6 +139,33 @@ export default function CartePage() {
         {!loading && filtered.length === 0 && (
           <div className="text-center mt-6 text-gray-400 text-sm">
             Aucun établissement avec des coordonnées GPS dans ce rayon.
+          </div>
+        )}
+
+        {userPosition && prochesAvecDistance.length > 0 && (
+          <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h2 className="text-xl font-bold mb-4" style={{ color: '#212E53' }}>
+              📍 Les plus proches de vous
+            </h2>
+            <div className="grid gap-3 md:grid-cols-2">
+              {prochesAvecDistance.map((entreprise) => (
+                <Link
+                  key={entreprise.id}
+                  href={`/entreprise/${entreprise.id}`}
+                  className="rounded-lg border border-gray-100 px-4 py-3 hover:bg-gray-50 transition"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-semibold" style={{ color: '#212E53' }}>{entreprise.nom}</p>
+                      <p className="text-xs text-gray-400">{entreprise.secteur} · {entreprise.ville}</p>
+                    </div>
+                    <span className="text-sm font-medium" style={{ color: '#1a7a3c' }}>
+                      {entreprise.distance.toFixed(1)} km
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
         )}
       </div>

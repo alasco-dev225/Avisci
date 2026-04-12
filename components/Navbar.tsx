@@ -22,7 +22,7 @@ export default function Navbar() {
 
   return (
     <nav style={{ backgroundColor: '#ECF8F6' }} className="sticky top-0 z-50 shadow-lg">
-      <div className="max-w-7xl mx-auto px-4 py-1">
+      <div className="max-w-7xl mx-auto px-4 py-0">
         <div className="flex justify-between items-center">
 
           {/* LOGO */}
@@ -30,8 +30,8 @@ export default function Navbar() {
             <Image
               src="/logo.png"
               alt="AvisCI"
-              width={160}
-              height={55}
+              width={110}
+              height={30}
               className="object-contain"
               priority
             />

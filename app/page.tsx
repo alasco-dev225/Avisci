@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
@@ -11,6 +12,8 @@ type Entreprise = {
   ville: string
   note_moyenne: number
   total_avis: number
+  logo_url?: string
+  created_at?: string
 }
 
 const SECTEURS = [
@@ -24,11 +27,13 @@ const VILLES = [
   'Yamoussoukro', 'Korhogo', 'Man', 'Gagnoa'
 ]
 
+const PAR_PAGE = 12
+
 function EtoilesNote({ note }: { note: number }) {
   return (
     <div className="flex items-center gap-0.5">
       {[1, 2, 3, 4, 5].map((i) => (
-        <span key={i} style={{ color: i <= Math.round(note) ? '#F5CB5C' : '#d1d5db' }}>★</span>
+        <span key={i} style={{ color: i <= Math.round(note) ? '#D4A843' : '#E2DDD6', fontSize: '13px' }}>★</span>
       ))}
     </div>
   )
@@ -40,185 +45,271 @@ export default function Home() {
   const [recherche, setRecherche] = useState('')
   const [secteur, setSecteur] = useState('Tous')
   const [ville, setVille] = useState('Toutes')
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [tri, setTri] = useState<'note' | 'nom' | 'recent'>('note')
+  const [noteMin, setNoteMin] = useState(0)
+
+  useEffect(() => {
+    setPage(1)
+  }, [recherche, secteur, ville, tri, noteMin])
 
   useEffect(() => {
     fetchEntreprises()
-  }, [recherche, secteur, ville])
+  }, [recherche, secteur, ville, page, tri, noteMin])
 
   async function fetchEntreprises() {
     setLoading(true)
+
     let query = supabase
       .from('entreprises')
-      .select('*')
-      .order('note_moyenne', { ascending: false })
+      .select('*', { count: 'exact' })
+      .range((page - 1) * PAR_PAGE, page * PAR_PAGE - 1)
 
+    if (tri === 'note') query = query.order('note_moyenne', { ascending: false })
+    if (tri === 'nom') query = query.order('nom', { ascending: true })
+    if (tri === 'recent') query = query.order('created_at', { ascending: false })
     if (recherche) query = query.ilike('nom', `%${recherche}%`)
     if (secteur !== 'Tous') query = query.eq('secteur', secteur)
     if (ville !== 'Toutes') query = query.eq('ville', ville)
+    if (noteMin > 0) query = query.gte('note_moyenne', noteMin)
 
-    const { data } = await query
+    const { data, count } = await query
     if (data) setEntreprises(data as Entreprise[])
+    if (count !== null) setTotal(count)
     setLoading(false)
   }
 
+  const totalPages = Math.ceil(total / PAR_PAGE)
+
   return (
-    <div style={{ backgroundColor: '#ffffff' }}>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+        .font-display { font-family: 'Playfair Display', serif; }
+        .font-body { font-family: 'DM Sans', sans-serif; }
+        body { font-family: 'DM Sans', sans-serif; background: #F8F7F4; }
+        .card-hover { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(27,43,75,0.12); }
+        .search-input:focus { outline: none; box-shadow: 0 0 0 3px rgba(212,168,67,0.2); }
+        .page-btn { transition: all 0.2s; }
+        .page-btn:hover { transform: translateY(-1px); }
+      `}</style>
 
-      {/* Hero */}
-      <div style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #f0f0f0' }} className="py-20">
-        <div className="max-w-4xl mx-auto px-4 text-center">
-          <div style={{ color: '#00C092' }} className="text-sm font-semibold uppercase tracking-widest mb-3">
-                Un "consommateur" averti en vaut 2
+      <div style={{ backgroundColor: '#F8F7F4', minHeight: '100vh' }}>
+
+        {/* HERO */}
+        <div style={{ background: 'linear-gradient(160deg, #1B2B4B 0%, #243659 60%, #1B2B4B 100%)', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: '-100px', right: '-100px', width: '500px', height: '500px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(212,168,67,0.15) 0%, transparent 70%)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', bottom: '-50px', left: '-50px', width: '300px', height: '300px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(212,168,67,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+          <div className="max-w-5xl mx-auto px-6 py-24 text-center" style={{ position: 'relative', zIndex: 1 }}>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8" style={{ backgroundColor: 'rgba(212,168,67,0.15)', border: '1px solid rgba(212,168,67,0.3)' }}>
+              <span style={{ color: '#D4A843', fontSize: '13px', fontWeight: 500, letterSpacing: '0.05em' }}>🇨🇮 PLATEFORME #1 EN CÔTE D'IVOIRE</span>
+            </div>
+
+            <h1 className="font-display mb-6" style={{ fontSize: 'clamp(2.5rem, 5vw, 4rem)', fontWeight: 700, color: '#FFFFFF', lineHeight: 1.15, letterSpacing: '-0.02em' }}>
+              Trouvez les meilleures<br />
+              <span style={{ color: '#D4A843' }}>entreprises ivoiriennes</span>
+            </h1>
+
+            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '1.125rem', fontWeight: 300, marginBottom: '3rem', maxWidth: '480px', margin: '0 auto 3rem' }}>
+              Des milliers d'avis authentiques pour guider vos décisions au quotidien
+            </p>
+
+            <div className="max-w-2xl mx-auto mb-12">
+              <div className="flex rounded-2xl overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', padding: '6px' }}>
+                <input
+                  type="text"
+                  placeholder="Rechercher une entreprise..."
+                  value={recherche}
+                  onChange={(e) => setRecherche(e.target.value)}
+                  className="search-input flex-1 bg-transparent px-5 py-3 text-white placeholder-white/40 text-sm font-body"
+                  style={{ border: 'none' }}
+                />
+                <button style={{ backgroundColor: '#D4A843', color: '#1B2B4B', borderRadius: '14px', padding: '12px 28px', fontWeight: 600, fontSize: '14px', whiteSpace: 'nowrap' }}>
+                  Rechercher
+                </button>
+              </div>
+            </div>
+
+            <div className="flex justify-center gap-12">
+              {[
+                { val: `${total}+`, label: 'Entreprises' },
+                { val: '100%', label: 'Avis vérifiés' },
+                { val: 'Gratuit', label: 'Pour tous' },
+              ].map((s, i) => (
+                <div key={i} className="text-center">
+                  <div className="font-display" style={{ fontSize: '1.75rem', fontWeight: 700, color: '#FFFFFF' }}>{s.val}</div>
+                  <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.45)', fontWeight: 400, marginTop: '2px' }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight" style={{ color: '#1a1a1a' }}>
-            Trouvez les meilleures<br />entreprises ivoiriennes
-          </h1>
-          <p className="text-lg mb-10" style={{ color: '#555555' }}>
-            Des milliers d'avis de vrais clients pour guider vos choix
-          </p>
+        </div>
 
-          {/* Barre de recherche */}
-          <div className="max-w-2xl mx-auto">
-            <div className="flex bg-white rounded-xl overflow-hidden shadow-xl border border-gray-200">
-              <input
-                type="text"
-                placeholder="🔍  Rechercher une entreprise..."
-                value={recherche}
-                onChange={(e) => setRecherche(e.target.value)}
-                className="flex-1 px-5 py-4 text-gray-800 text-base focus:outline-none"
-              />
-              <button
-                style={{ backgroundColor: '#F5CB5C', color: '#1a1a1a' }}
-                className="px-6 font-semibold hover:opacity-90 transition"
-              >
-                Chercher
+        {/* FILTRES */}
+        <div style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #EDE9E3', position: 'sticky', top: '0', zIndex: 40, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+          <div className="max-w-7xl mx-auto px-6 py-3 flex flex-wrap gap-3 items-center">
+            <select value={secteur} onChange={(e) => setSecteur(e.target.value)}
+              className="font-body text-sm px-4 py-2 rounded-xl border"
+              style={{ borderColor: '#E2DDD6', color: '#1B2B4B', backgroundColor: '#FAFAF8' }}>
+              {SECTEURS.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select value={ville} onChange={(e) => setVille(e.target.value)}
+              className="font-body text-sm px-4 py-2 rounded-xl border"
+              style={{ borderColor: '#E2DDD6', color: '#1B2B4B', backgroundColor: '#FAFAF8' }}>
+              {VILLES.map(v => <option key={v} value={v}>{v}</option>)}
+            </select>
+            <select value={tri} onChange={(e) => setTri(e.target.value as 'note' | 'nom' | 'recent')}
+              className="font-body text-sm px-4 py-2 rounded-xl border"
+              style={{ borderColor: '#E2DDD6', color: '#1B2B4B', backgroundColor: '#FAFAF8' }}>
+              <option value="note">Mieux notées</option>
+              <option value="nom">Nom A-Z</option>
+              <option value="recent">Ajouts récents</option>
+            </select>
+            <select value={noteMin} onChange={(e) => setNoteMin(Number(e.target.value))}
+              className="font-body text-sm px-4 py-2 rounded-xl border"
+              style={{ borderColor: '#E2DDD6', color: '#1B2B4B', backgroundColor: '#FAFAF8' }}>
+              <option value={0}>Toutes les notes</option>
+              <option value={3}>3+ étoiles</option>
+              <option value={4}>4+ étoiles</option>
+            </select>
+            {(secteur !== 'Tous' || ville !== 'Toutes' || recherche || tri !== 'note' || noteMin !== 0) && (
+              <button onClick={() => { setRecherche(''); setSecteur('Tous'); setVille('Toutes'); setTri('note'); setNoteMin(0) }}
+                className="text-sm font-medium" style={{ color: '#E05252' }}>
+                ✕ Réinitialiser
               </button>
-            </div>
+            )}
+            <span className="ml-auto text-sm" style={{ color: '#9B9589' }}>
+              {total} résultat{total > 1 ? 's' : ''}
+            </span>
           </div>
+        </div>
 
-          {/* Stats */}
-          <div className="flex justify-center gap-8 mt-10 text-center">
+        {/* LISTE */}
+        <div className="max-w-7xl mx-auto px-6 py-16">
+          <div className="flex items-end justify-between mb-10">
             <div>
-              <div className="text-2xl font-bold" style={{ color: '#1a1a1a' }}>{entreprises.length}+</div>
-              <div className="text-sm" style={{ color: '#888888' }}>Entreprises</div>
+              <h2 className="font-display" style={{ fontSize: '1.75rem', fontWeight: 700, color: '#1B2B4B', letterSpacing: '-0.02em' }}>
+                Entreprises recommandées
+              </h2>
+              <p style={{ color: '#9B9589', fontSize: '14px', marginTop: '4px' }}>
+                Page {page} sur {totalPages} — {total} établissements
+              </p>
             </div>
-            <div style={{ borderLeft: '1px solid #e0e0e0' }} className="pl-8">
-              <div className="text-2xl font-bold" style={{ color: '#1a1a1a' }}>100%</div>
-              <div className="text-sm" style={{ color: '#888888' }}>Avis vérifiés</div>
-            </div>
-            <div style={{ borderLeft: '1px solid #e0e0e0' }} className="pl-8">
-              <div className="text-2xl font-bold" style={{ color: '#1a1a1a' }}>Gratuit</div>
-              <div className="text-sm" style={{ color: '#888888' }}>Pour tous</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filtres */}
-      <div className="bg-white border-b sticky top-16 z-40 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap gap-3 items-center">
-          <select
-            value={secteur}
-            onChange={(e) => setSecteur(e.target.value)}
-            className="border rounded-lg px-3 py-2 text-sm focus:outline-none"
-            style={{ color: '#1a1a1a', borderColor: '#d1d5db' }}
-          >
-            {SECTEURS.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-
-          <select
-            value={ville}
-            onChange={(e) => setVille(e.target.value)}
-            className="border rounded-lg px-3 py-2 text-sm focus:outline-none"
-            style={{ color: '#1a1a1a', borderColor: '#d1d5db' }}
-          >
-            {VILLES.map(v => <option key={v} value={v}>{v}</option>)}
-          </select>
-
-          {(secteur !== 'Tous' || ville !== 'Toutes' || recherche) && (
-            <button
-              onClick={() => { setRecherche(''); setSecteur('Tous'); setVille('Toutes') }}
-              className="text-sm text-red-500 hover:underline"
-            >
-              ✕ Réinitialiser
-            </button>
-          )}
-
-          <span className="text-sm ml-auto" style={{ color: '#888888' }}>
-            {entreprises.length} résultat{entreprises.length > 1 ? 's' : ''}
-          </span>
-        </div>
-      </div>
-
-      {/* Liste entreprises */}
-      <div className="max-w-7xl mx-auto px-4 py-12">
-        <h2 className="text-2xl font-bold mb-8" style={{ color: '#1a1a1a' }}>
-          Entreprises recommandées
-        </h2>
-
-        {loading ? (
-          <div className="text-center py-16" style={{ color: '#888888' }}>Chargement...</div>
-        ) : entreprises.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-5xl mb-4">🔍</p>
-            <p className="text-xl" style={{ color: '#555555' }}>Aucune entreprise trouvée</p>
-            <Link
-              href="/ajouter"
-              style={{ backgroundColor: '#212E53', color: '#ffffff' }}
-              className="mt-6 inline-block px-6 py-3 rounded-lg hover:opacity-90 transition"
-            >
-              Ajouter une entreprise
+            <Link href="/ajouter" style={{ color: '#1B2B4B', fontSize: '14px', fontWeight: 500, borderBottom: '1px solid #D4A843', paddingBottom: '2px' }}>
+              + Ajouter une entreprise
             </Link>
           </div>
-        ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {entreprises.map((entreprise) => (
-              <Link
-                key={entreprise.id}
-                href={`/entreprise/${entreprise.id}`}
-                className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition hover:-translate-y-0.5 block"
-              >
-                {/* Header carte */}
-                <div className="flex justify-between items-start mb-4">
-                  <div
-                    style={{ backgroundColor: '#212E53', color: 'white' }}
-                    className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg"
-                  >
-                    {entreprise.nom.charAt(0)}
-                  </div>
-                  <span
-                    style={{ backgroundColor: '#FFF8E1', color: '#F5CB5C' }}
-                    className="text-xs px-2 py-1 rounded-full font-medium"
-                  >
-                    {entreprise.secteur}
-                  </span>
-                </div>
 
-                <h3 className="font-bold text-lg mb-1" style={{ color: '#1a1a1a' }}>{entreprise.nom}</h3>
-                <p className="text-sm mb-3" style={{ color: '#888888' }}>📍 {entreprise.ville}</p>
-
-                {/* Note */}
-                <div className="flex items-center gap-2 mb-3">
-                  <EtoilesNote note={entreprise.note_moyenne || 0} />
-                  <span className="font-bold text-sm" style={{ color: '#1a1a1a' }}>{entreprise.note_moyenne?.toFixed(1) || '0.0'}</span>
-                  <span className="text-xs" style={{ color: '#888888' }}>({entreprise.total_avis || 0} avis)</span>
-                </div>
-
-                <p className="text-sm line-clamp-2" style={{ color: '#555555' }}>{entreprise.description}</p>
-
-                <div
-                  style={{ color: '#212E53' }}
-                  className="text-sm font-medium mt-4 flex items-center gap-1"
-                >
-                  Voir les avis →
-                </div>
+          {loading ? (
+            <div className="text-center py-20" style={{ color: '#9B9589' }}>Chargement...</div>
+          ) : entreprises.length === 0 ? (
+            <div className="text-center py-20">
+              <p className="text-5xl mb-4">🔍</p>
+              <p style={{ color: '#6B6560', fontSize: '1.125rem' }}>Aucune entreprise trouvée</p>
+              <Link href="/ajouter" className="mt-6 inline-block px-6 py-3 rounded-xl text-white text-sm font-medium"
+                style={{ backgroundColor: '#1B2B4B' }}>
+                Ajouter une entreprise
               </Link>
-            ))}
-          </div>
-        )}
-      </div>
+            </div>
+          ) : (
+            <>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {entreprises.map((e) => (
+                  <Link key={e.id} href={`/entreprise/${e.id}`}
+                    className="card-hover block bg-white rounded-2xl p-6"
+                    style={{ border: '1px solid #EDE9E3', boxShadow: '0 2px 8px rgba(27,43,75,0.05)' }}>
 
-      
-    </div>
+                    <div className="flex justify-between items-start mb-5">
+                      <div className="relative w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center font-display font-bold text-lg"
+                        style={{ backgroundColor: '#1B2B4B', color: '#D4A843' }}>
+                        {e.logo_url
+                          ? <Image src={e.logo_url} alt={e.nom} fill sizes="48px" className="object-cover" />
+                          : e.nom.charAt(0)
+                        }
+                      </div>
+                      <span className="text-xs px-3 py-1 rounded-full font-medium"
+                        style={{ backgroundColor: '#F3F0EA', color: '#6B6560' }}>
+                        {e.secteur}
+                      </span>
+                    </div>
+
+                    <h3 className="font-display font-semibold mb-1" style={{ color: '#1B2B4B', fontSize: '1.05rem' }}>{e.nom}</h3>
+                    <p className="text-sm mb-4" style={{ color: '#9B9589' }}>📍 {e.ville}</p>
+
+                    <div className="flex items-center gap-2 mb-4">
+                      <EtoilesNote note={e.note_moyenne || 0} />
+                      <span className="font-semibold text-sm" style={{ color: '#1B2B4B' }}>{e.note_moyenne?.toFixed(1) || '0.0'}</span>
+                      <span className="text-xs" style={{ color: '#C4BFB8' }}>({e.total_avis || 0} avis)</span>
+                    </div>
+
+                    <p className="text-sm mb-5 line-clamp-2" style={{ color: '#6B6560', lineHeight: 1.6 }}>{e.description}</p>
+
+                    <div className="flex items-center justify-between pt-4" style={{ borderTop: '1px solid #F0EDE8' }}>
+                      <span className="text-sm font-medium" style={{ color: '#D4A843' }}>Voir les avis →</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+
+              {/* PAGINATION */}
+              <div className="flex items-center justify-center gap-2 mt-16">
+                <button
+                  onClick={() => { setPage(p => p - 1); window.scrollTo(0, 0) }}
+                  disabled={page === 1}
+                  className="page-btn px-4 py-2 rounded-xl text-sm font-medium"
+                  style={{
+                    backgroundColor: page === 1 ? '#F0EDE8' : '#1B2B4B',
+                    color: page === 1 ? '#C4BFB8' : '#FFFFFF',
+                    cursor: page === 1 ? 'not-allowed' : 'pointer'
+                  }}>
+                  ← Précédent
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(p => p === 1 || p === totalPages || (p >= page - 2 && p <= page + 2))
+                  .map((p, index, arr) => (
+                    <div key={p} className="flex items-center gap-2">
+                      {index > 0 && arr[index - 1] !== p - 1 && (
+                        <span style={{ color: '#C4BFB8' }}>...</span>
+                      )}
+                      <button
+                        onClick={() => { setPage(p); window.scrollTo(0, 0) }}
+                        className="page-btn w-10 h-10 rounded-xl text-sm font-medium"
+                        style={{
+                          backgroundColor: page === p ? '#D4A843' : '#FFFFFF',
+                          color: page === p ? '#1B2B4B' : '#6B6560',
+                          border: page === p ? 'none' : '1px solid #EDE9E3',
+                          fontWeight: page === p ? 700 : 400,
+                        }}>
+                        {p}
+                      </button>
+                    </div>
+                  ))
+                }
+
+                <button
+                  onClick={() => { setPage(p => p + 1); window.scrollTo(0, 0) }}
+                  disabled={page === totalPages}
+                  className="page-btn px-4 py-2 rounded-xl text-sm font-medium"
+                  style={{
+                    backgroundColor: page === totalPages ? '#F0EDE8' : '#1B2B4B',
+                    color: page === totalPages ? '#C4BFB8' : '#FFFFFF',
+                    cursor: page === totalPages ? 'not-allowed' : 'pointer'
+                  }}>
+                  Suivant →
+                </button>
+              </div>
+
+              <p className="text-center text-sm mt-4" style={{ color: '#C4BFB8' }}>
+                Affichage {(page - 1) * PAR_PAGE + 1} — {Math.min(page * PAR_PAGE, total)} sur {total} entreprises
+              </p>
+            </>
+          )}
+        </div>
+      </div>
+    </>
   )
 }
