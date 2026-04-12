@@ -1,5 +1,6 @@
 'use client'
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
@@ -20,56 +21,69 @@ export default function Navbar() {
   }
 
   return (
-    <nav style={{ backgroundColor: '#1a7a3c' }} className="sticky top-0 z-50 shadow-lg">
-      <div className="max-w-7xl mx-auto px-4 py-3">
+    <nav style={{ backgroundColor: '#ECF8F6' }} className="sticky top-0 z-50 shadow-lg">
+      <div className="max-w-7xl mx-auto px-4 py-1">
         <div className="flex justify-between items-center">
-          <Link href="/" className="flex items-center space-x-2">
-            <div style={{ backgroundColor: '#c9a832' }} className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-sm">A</div>
-            <span className="font-bold text-xl text-white tracking-wide">AvisCI</span>
-            <span style={{ color: '#c9a832' }} className="text-xs font-medium hidden md:block">Cote d Ivoire</span>
+
+          {/* LOGO */}
+          <Link href="/">
+            <Image
+              src="/logo.png"
+              alt="AvisCI"
+              width={120}
+              height={40}
+              className="object-contain"
+              priority
+            />
           </Link>
 
           <div className="hidden md:flex items-center space-x-4">
-            <Link href="/" className="text-green-100 hover:text-white text-sm transition">Accueil</Link>
-            <Link href="/stats" className="text-green-100 hover:text-white text-sm transition">Statistiques</Link>
-            <Link href="/ajouter" style={{ backgroundColor: '#c9a832', color: '#1a1a1a' }} className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition">
+            <Link href="/" style={{ color: '#212E53' }} className="hover:opacity-70 text-sm font-medium transition">
+              Accueil
+            </Link>
+            <Link href="/stats" style={{ color: '#212E53' }} className="hover:opacity-70 text-sm font-medium transition">
+              Statistiques
+            </Link>
+            <Link href="/ajouter" style={{ backgroundColor: '#212E53', color: '#ECF8F6' }} className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition">
               + Ajouter une entreprise
             </Link>
             {user ? (
               <div className="flex items-center space-x-3">
-                <span className="text-green-100 text-sm">
+                <span style={{ color: '#212E53' }} className="text-sm font-medium">
                   {user.user_metadata?.nom || user.email}
                 </span>
-                <button onClick={deconnexion} className="text-red-300 hover:text-red-100 text-sm transition">
+                <button onClick={deconnexion} className="text-red-400 hover:text-red-600 text-sm transition">
                   Deconnexion
                 </button>
               </div>
             ) : (
-              <Link href="/auth" className="text-white border border-green-400 px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition">
+              <Link href="/auth" style={{ color: '#212E53', borderColor: '#212E53' }} className="border px-4 py-2 rounded-lg text-sm font-medium hover:opacity-70 transition">
                 Connexion
               </Link>
             )}
           </div>
 
-          <button onClick={() => setMenuOpen(!menuOpen)} className="md:hidden text-white text-2xl">
+          {/* Bouton menu mobile */}
+          <button onClick={() => setMenuOpen(!menuOpen)} style={{ color: '#212E53' }} className="md:hidden text-2xl font-bold">
             {menuOpen ? 'X' : '='}
           </button>
         </div>
 
+        {/* Menu mobile */}
         {menuOpen && (
-          <div className="md:hidden mt-3 pb-3 space-y-2 border-t border-green-600 pt-3">
-            <Link href="/" className="block text-green-100 py-2">Accueil</Link>
-            <Link href="/stats" className="block text-green-100 py-2">Statistiques</Link>
-            <Link href="/ajouter" style={{ color: '#c9a832' }} className="block py-2 font-semibold">
+          <div className="md:hidden mt-2 pb-3 space-y-2 border-t pt-3" style={{ borderColor: '#212E53' }}>
+            <Link href="/" style={{ color: '#212E53' }} className="block py-2 text-sm font-medium">Accueil</Link>
+            <Link href="/stats" style={{ color: '#212E53' }} className="block py-2 text-sm font-medium">Statistiques</Link>
+            <Link href="/ajouter" style={{ color: '#212E53' }} className="block py-2 text-sm font-semibold">
               + Ajouter une entreprise
             </Link>
             {user ? (
               <div>
-                <span className="block text-green-100 text-sm py-2">{user.user_metadata?.nom || user.email}</span>
-                <button onClick={deconnexion} className="block text-red-300 py-2 text-sm">Deconnexion</button>
+                <span style={{ color: '#212E53' }} className="block text-sm py-2">{user.user_metadata?.nom || user.email}</span>
+                <button onClick={deconnexion} className="block text-red-400 py-2 text-sm">Deconnexion</button>
               </div>
             ) : (
-              <Link href="/auth" className="block text-white py-2">Connexion</Link>
+              <Link href="/auth" style={{ color: '#212E53' }} className="block py-2 text-sm font-medium">Connexion</Link>
             )}
           </div>
         )}
