@@ -19,6 +19,13 @@ type Avis = {
   created_at: string
   entreprises: { id: string, nom: string }
 }
+type OwnedEntreprise = {
+  id: string
+  nom: string
+  logo_url?: string
+  secteur?: string
+  ville?: string
+}
 
 function Etoiles({ note }: { note: number }) {
   return (
@@ -43,6 +50,8 @@ export default function ProfilPage() {
   const [nom, setNom] = useState('')
   const [bio, setBio] = useState('')
   const [succes, setSucces] = useState(false)
+  const [ownedEntreprises, setOwnedEntreprises] = useState<OwnedEntreprise[]>([])
+  const [uploadingLogoId, setUploadingLogoId] = useState<string | null>(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -72,6 +81,14 @@ export default function ProfilPage() {
         .order('created_at', { ascending: false })
 
       if (a) setAvis(a as Avis[])
+
+      const { data: owned } = await supabase
+        .from('entreprises')
+        .select('id, nom, logo_url, secteur, ville')
+        .eq('claimed_by', data.user.id)
+        .order('nom', { ascending: true })
+
+      if (owned) setOwnedEntreprises(owned as OwnedEntreprise[])
       setLoading(false)
     })
   }, [])
@@ -110,6 +127,23 @@ export default function ProfilPage() {
       setProfile(prev => prev ? { ...prev, avatar_url } : { id: user.id, nom, bio, avatar_url })
     }
     setUploadingPhoto(false)
+  }
+
+  async function uploadLogoEntreprise(entrepriseId: string, file: File) {
+    if (!user) return
+    setUploadingLogoId(entrepriseId)
+    const extension = file.name.split('.').pop() || 'png'
+    const path = `${entrepriseId}/${Date.now()}.${extension}`
+
+    const { error } = await supabase.storage.from('company-logos').upload(path, file, { upsert: true })
+
+    if (!error) {
+      const { data: urlData } = supabase.storage.from('company-logos').getPublicUrl(path)
+      await supabase.from('entreprises').update({ logo_url: urlData.publicUrl }).eq('id', entrepriseId).eq('claimed_by', user.id)
+      setOwnedEntreprises((prev) => prev.map((ent) => (ent.id === entrepriseId ? { ...ent, logo_url: urlData.publicUrl } : ent)))
+    }
+
+    setUploadingLogoId(null)
   }
 
   if (loading) return (
@@ -257,6 +291,52 @@ export default function ProfilPage() {
                   </div>
                   <Etoiles note={a.note} />
                   <p className="text-sm text-gray-600 mt-2">{a.commentaire}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div>
+          <h2 className="font-bold text-xl mb-4" style={{ color: '#212E53' }}>
+            🏢 Mes établissements ({ownedEntreprises.length})
+          </h2>
+          {ownedEntreprises.length === 0 ? (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 text-sm text-gray-500">
+              Vous n'avez pas encore de fiche revendiquée.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {ownedEntreprises.map((ent) => (
+                <div key={ent.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                    <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-gray-200 flex items-center justify-center bg-gray-50">
+                      {ent.logo_url ? (
+                        <Image src={ent.logo_url} alt={ent.nom} fill sizes="64px" className="object-cover" />
+                      ) : (
+                        <span className="text-xl font-bold text-gray-400">{ent.nom.charAt(0)}</span>
+                      )}
+                    </div>
+
+                    <div className="flex-1">
+                      <p className="font-semibold" style={{ color: '#212E53' }}>{ent.nom}</p>
+                      <p className="text-xs text-gray-500">{ent.secteur} · {ent.ville}</p>
+                    </div>
+
+                    <label className="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer" style={{ backgroundColor: '#212E53', color: '#fff' }}>
+                      {uploadingLogoId === ent.id ? 'Upload...' : 'Changer le logo'}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) uploadLogoEntreprise(ent.id, file)
+                          e.currentTarget.value = ''
+                        }}
+                      />
+                    </label>
+                  </div>
                 </div>
               ))}
             </div>
