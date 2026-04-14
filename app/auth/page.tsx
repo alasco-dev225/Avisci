@@ -1,53 +1,65 @@
-'use client';
-
-import { useState } from 'react';
-import { createClient } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+'use client'
+import { useState } from 'react'
+import { supabase } from '@/lib/supabase'
+import { useRouter } from 'next/navigation'
 
 export default function AuthPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  
-  const router = useRouter();
-  const supabase = createClient();
+  const router = useRouter()
+  const [mode, setMode] = useState<'connexion' | 'inscription'>('connexion')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [nom, setNom] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState<{ type: 'success' | 'error', texte: string } | null>(null)
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setMessage(null)
+
+    if (mode === 'inscription') {
+      const { error } = await supabase.auth.signUp({
+        email,
         password,
-      });
-
-      if (error) {
-        if (error.message.toLowerCase().includes('email not confirmed')) {
-          setError("Ton email n'est pas encore confirme. Verifie ta boite mail puis reessaie.");
-          return;
-        }
-        setError(error.message);
-        return;
-      }
-
-      router.push('/');
-      router.refresh();
-    } catch {
-      setError('Une erreur inattendue est survenue. Réessaie dans un instant.');
-    } finally {
-      setLoading(false);
+        options: { data: { nom } }
+      })
+      if (error) setMessage({ type: 'error', texte: error.message })
+      else setMessage({ type: 'success', texte: 'Compte créé ! Vérifiez votre email pour confirmer.' })
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) setMessage({ type: 'error', texte: 'Email ou mot de passe incorrect.' })
+      else router.push('/')
     }
-  };
+
+    setLoading(false)
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12">
-      <div className="max-w-md w-full bg-white p-8 rounded-3xl shadow-lg">
-        <h1 className="text-3xl font-bold text-center mb-2">Connexion</h1>
-        <p className="text-center text-gray-600 mb-8">Bienvenue sur AvisCI</p>
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
+        <div className="text-center mb-8">
+          <span className="text-4xl">⭐</span>
+          <h1 className="text-2xl font-bold mt-2">AvisCI</h1>
+          <p className="text-gray-500 text-sm mt-1">
+            {mode === 'connexion' ? 'Connectez-vous à votre compte' : 'Créez votre compte gratuit'}
+          </p>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex bg-gray-100 rounded-lg p-1 mb-6">
+          <button
+            onClick={() => { setMode('connexion'); setMessage(null) }}
+            className={`flex-1 py-2 rounded-md text-sm font-medium transition ${mode === 'connexion' ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
+          >
+            Connexion
+          </button>
+          <button
+            onClick={() => { setMode('inscription'); setMessage(null) }}
+            className={`flex-1 py-2 rounded-md text-sm font-medium transition ${mode === 'inscription' ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
+          >
+            Inscription
+          </button>
+        </div>
 
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-2xl mb-6">
@@ -55,45 +67,54 @@ export default function AuthPage() {
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {mode === 'inscription' && (
+            <div>
+              <label className="block text-sm font-medium mb-1">Votre nom</label>
+              <input
+                type="text"
+                value={nom}
+                onChange={(e) => setNom(e.target.value)}
+                required
+                placeholder="Ex: Kouassi Jean"
+                className="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          )}
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+            <label className="block text-sm font-medium mb-1">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:outline-none focus:border-orange-500"
-              placeholder="exemple@gmail.com"
               required
+              placeholder="votre@email.com"
+              className="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Mot de passe</label>
+            <label className="block text-sm font-medium mb-1">Mot de passe</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:outline-none focus:border-orange-500"
               required
+              placeholder="••••••••"
+              minLength={6}
+              className="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-orange-600 hover:bg-orange-700 text-white py-4 rounded-2xl font-semibold transition disabled:opacity-70"
+            className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50"
           >
-            {loading ? "Connexion en cours..." : "Se connecter"}
+            {loading ? 'Chargement...' : mode === 'connexion' ? 'Se connecter' : "S'inscrire"}
           </button>
         </form>
-
-        <p className="text-center mt-6 text-sm text-gray-600">
-          Pas de compte ?{' '}
-          <Link href="/auth/signup" className="text-orange-600 hover:underline">
-            Créer un compte
-          </Link>
-        </p>
       </div>
     </div>
   );
