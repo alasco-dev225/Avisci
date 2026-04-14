@@ -1,43 +1,55 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 
-export default function AuthPage() {
+export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
+  const [success, setSuccess] = useState('');
+
   const router = useRouter();
   const supabase = createClient();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
-    
+    setSuccess('');
+
+    if (password.length < 6) {
+      setError('Le mot de passe doit contenir au moins 6 caracteres.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Les mots de passe ne correspondent pas.');
+      return;
+    }
+
+    setLoading(true);
+
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password,
       });
 
       if (error) {
-        if (error.message.toLowerCase().includes('email not confirmed')) {
-          setError("Ton email n'est pas encore confirme. Verifie ta boite mail puis reessaie.");
-          return;
-        }
         setError(error.message);
         return;
       }
 
-      router.push('/');
-      router.refresh();
+      setSuccess('Compte cree. Verifie ton email pour confirmer ton inscription.');
+      setTimeout(() => {
+        router.push('/auth');
+      }, 1200);
     } catch {
-      setError('Une erreur inattendue est survenue. Réessaie dans un instant.');
+      setError('Une erreur inattendue est survenue. Reessaie dans un instant.');
     } finally {
       setLoading(false);
     }
@@ -46,8 +58,8 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12">
       <div className="max-w-md w-full bg-white p-8 rounded-3xl shadow-lg">
-        <h1 className="text-3xl font-bold text-center mb-2">Connexion</h1>
-        <p className="text-center text-gray-600 mb-8">Bienvenue sur AvisCI</p>
+        <h1 className="text-3xl font-bold text-center mb-2">Inscription</h1>
+        <p className="text-center text-gray-600 mb-8">Cree ton compte AvisCI</p>
 
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-2xl mb-6">
@@ -55,7 +67,13 @@ export default function AuthPage() {
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-6">
+        {success && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-2xl mb-6">
+            {success}
+          </div>
+        )}
+
+        <form onSubmit={handleSignup} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
             <input
@@ -76,6 +94,21 @@ export default function AuthPage() {
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:outline-none focus:border-orange-500"
               required
+              minLength={6}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Confirmer le mot de passe
+            </label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:outline-none focus:border-orange-500"
+              required
+              minLength={6}
             />
           </div>
 
@@ -84,14 +117,14 @@ export default function AuthPage() {
             disabled={loading}
             className="w-full bg-orange-600 hover:bg-orange-700 text-white py-4 rounded-2xl font-semibold transition disabled:opacity-70"
           >
-            {loading ? "Connexion en cours..." : "Se connecter"}
+            {loading ? 'Creation en cours...' : 'Creer mon compte'}
           </button>
         </form>
 
         <p className="text-center mt-6 text-sm text-gray-600">
-          Pas de compte ?{' '}
-          <Link href="/auth/signup" className="text-orange-600 hover:underline">
-            Créer un compte
+          Tu as deja un compte ?{' '}
+          <Link href="/auth" className="text-orange-600 hover:underline">
+            Se connecter
           </Link>
         </p>
       </div>

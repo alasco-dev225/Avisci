@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import "./globals.css";
+import { createServerClient } from "@/lib/supabase-server";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -12,19 +13,12 @@ export const metadata: Metadata = {
   description: "Trouvez les meilleures entreprises en Côte d'Ivoire",
   manifest: "/manifest.json",
   themeColor: "#1B2B4B",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "AvisCI",
-  },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-  },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
   return (
     <html lang="fr">
       <head>
@@ -34,11 +28,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="theme-color" content="#1B2B4B" />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white`} suppressHydrationWarning>
-        <Navbar />
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white`}>
+        <Navbar user={user} />
         <main>{children}</main>
         <Footer />
       </body>
     </html>
-  )
+  );
 }

@@ -1,14 +1,16 @@
-import { createClient } from '@supabase/supabase-js'
-
-// Affiche les variables pour déboguer (à supprimer après)
-console.log('URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
-console.log('KEY:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+import { createBrowserClient } from '@supabase/ssr'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Les variables Supabase sont manquantes. Vérifie ton fichier .env.local')
+  throw new Error(
+    'Variables Supabase manquantes: NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY.'
+  )
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const createClient = () => {
+  return createBrowserClient(supabaseUrl, supabaseAnonKey)
+}
+
+export const supabase = createClient()
