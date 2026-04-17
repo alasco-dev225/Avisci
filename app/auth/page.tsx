@@ -1,10 +1,8 @@
 'use client'
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
 
 export default function AuthPage() {
-  const router = useRouter()
   const [mode, setMode] = useState<'connexion' | 'inscription'>('connexion')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -28,7 +26,7 @@ export default function AuthPage() {
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) setMessage({ type: 'error', texte: 'Email ou mot de passe incorrect.' })
-      else router.push('/')
+      else window.location.href = '/'
     }
 
     setLoading(false)
@@ -61,9 +59,13 @@ export default function AuthPage() {
           </button>
         </div>
 
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-2xl mb-6">
-            {error}
+        {message && (
+          <div className={`px-4 py-3 rounded-2xl mb-6 border ${
+            message.type === 'error'
+              ? 'bg-red-100 border-red-400 text-red-700'
+              : 'bg-green-100 border-green-400 text-green-700'
+          }`}>
+            {message.texte}
           </div>
         )}
 
@@ -117,5 +119,5 @@ export default function AuthPage() {
         </form>
       </div>
     </div>
-  );
+  )
 }
