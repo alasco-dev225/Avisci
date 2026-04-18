@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -12,6 +12,10 @@ export const metadata: Metadata = {
   title: "AvisCI - Les avis clients en Côte d'Ivoire",
   description: "Trouvez les meilleures entreprises en Côte d'Ivoire",
   manifest: "/manifest.json",
+};
+
+// ✅ themeColor déplacé ici dans viewport
+export const viewport: Viewport = {
   themeColor: "#1B2B4B",
 };
 
@@ -26,7 +30,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <link rel="apple-touch-icon" href="/logo.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="theme-color" content="#1B2B4B" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white`}>
         <Navbar user={user} />

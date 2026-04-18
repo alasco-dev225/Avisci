@@ -1,17 +1,26 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
+import { Menu } from 'lucide-react';
 
 interface NavbarProps {
   user: User | null;
 }
 
+const liens = [
+  { label: 'Accueil', href: '/' },
+  { label: 'Statistiques', href: '/stats' },
+  { label: '🗺️ Carte', href: '/carte' },
+  { label: 'Entreprises', href: '/entreprises' },
+  { label: '💬 Communauté', href: '/communaute' },
+];
+
 export default function Navbar({ user }: NavbarProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
 
   async function handleLogout() {
@@ -24,7 +33,7 @@ export default function Navbar({ user }: NavbarProps) {
     <nav className="bg-white border-b sticky top-0 z-50 shadow-sm">
       <div className="max-w-6xl mx-auto px-6">
         <div className="flex justify-between items-center h-16">
-          
+
           {/* LOGO */}
           <Link href="/" className="flex items-center gap-3">
             <div className="w-9 h-9 bg-orange-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl">
@@ -36,72 +45,116 @@ export default function Navbar({ user }: NavbarProps) {
             </div>
           </Link>
 
-          {/* Menu Desktop */}
+          {/* Liens desktop */}
           <div className="hidden md:flex items-center gap-8 text-[#212E53]">
-            <Link href="/" className="hover:text-orange-600 transition">Accueil</Link>
-            <Link href="/stats" className="hover:text-orange-600 transition">Statistiques</Link>
-            <Link href="/carte" className="hover:text-orange-600 transition">🗺️ Carte</Link>
-            <Link href="/entreprises" className="hover:text-orange-600 transition">Entreprises</Link>
+            {liens.map((lien) => (
+              <Link
+                key={lien.href}
+                href={lien.href}
+                className="text-sm font-medium hover:text-orange-600 transition-colors"
+              >
+                {lien.label}
+              </Link>
+            ))}
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-4">
-            <Link
-              href="/ajouter"
-              className="hidden md:block bg-orange-600 text-white px-5 py-2.5 rounded-2xl font-medium hover:bg-orange-700 transition"
+          {/* Actions desktop */}
+          <div className="hidden md:flex items-center gap-3">
+            <Button
+              asChild
+              className="bg-orange-600 hover:bg-orange-700 text-white rounded-2xl"
             >
-              + Ajouter une entreprise
-            </Link>
+              <Link href="/ajouter">+ Ajouter une entreprise</Link>
+            </Button>
 
             {user ? (
-              <div className="flex items-center gap-3">
-                <Link
-                  href="/profil"
-                  className="flex items-center gap-2 text-[#212E53] hover:text-orange-600 transition"
+              <>
+                <Button asChild variant="ghost" className="text-[#212E53] hover:text-orange-600">
+                  <Link href="/profil">
+                    👤 {user.user_metadata?.nom || 'Mon profil'}
+                  </Link>
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={handleLogout}
+                  className="text-red-600 hover:text-red-700 text-sm font-medium"
                 >
-                  👤 {user.user_metadata?.nom || 'Mon profil'}
-                </Link>
-                <button onClick={handleLogout} className="text-red-600 hover:text-red-700 text-sm font-medium">
                   Déconnexion
-                </button>
-              </div>
+                </Button>
+              </>
             ) : (
-              <Link
-              href="/auth"
-              className="bg-[#212E53] text-white px-6 py-2.5 rounded-2xl font-medium hover:bg-black transition"
+              <Button
+                asChild
+                className="bg-[#212E53] hover:bg-black text-white rounded-2xl"
               >
-              Connexion
-             </Link>
+                <Link href="/auth">Connexion</Link>
+              </Button>
             )}
-
-            {/* Bouton Menu Mobile */}
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="md:hidden text-3xl text-[#212E53]"
-            >
-              {menuOpen ? '✕' : '☰'}
-            </button>
           </div>
+
+          {/* Bouton burger mobile */}
+          <div className="md:hidden">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-6 w-6 text-[#212E53]" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-72">
+                <SheetTitle className="sr-only">Menu de navigation</SheetTitle>
+                <div className="flex flex-col gap-2 mt-8">
+
+                  {/* Liens */}
+                  {liens.map((lien) => (
+                    <Link
+                      key={lien.href}
+                      href={lien.href}
+                      className="text-[#212E53] text-base font-medium py-3 px-3 rounded-xl hover:bg-orange-50 hover:text-orange-600 transition-colors"
+                    >
+                      {lien.label}
+                    </Link>
+                  ))}
+
+                  <div className="border-t my-3" />
+
+                  {/* CTA Ajouter */}
+                  <Button
+                    asChild
+                    className="bg-orange-600 hover:bg-orange-700 text-white rounded-2xl w-full"
+                  >
+                    <Link href="/ajouter">+ Ajouter une entreprise</Link>
+                  </Button>
+
+                  {/* Auth */}
+                  {user ? (
+                    <>
+                      <Button asChild variant="outline" className="rounded-2xl w-full">
+                        <Link href="/profil">
+                          👤 {user.user_metadata?.nom || 'Mon profil'}
+                        </Link>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={handleLogout}
+                        className="text-red-600 hover:text-red-700 w-full rounded-2xl"
+                      >
+                        Déconnexion
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      asChild
+                      className="bg-[#212E53] hover:bg-black text-white rounded-2xl w-full"
+                    >
+                      <Link href="/auth">Connexion</Link>
+                    </Button>
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+
         </div>
-
-        {/* Menu Mobile */}
-        {menuOpen && (
-          <div className="md:hidden py-6 border-t bg-white">
-            <div className="flex flex-col gap-4 text-[#212E53]">
-              <Link href="/" className="py-2 hover:text-orange-600">Accueil</Link>
-              <Link href="/stats" className="py-2 hover:text-orange-600">Statistiques</Link>
-              <Link href="/carte" className="py-2 hover:text-orange-600">🗺️ Carte</Link>
-              <Link href="/entreprises" className="py-2 hover:text-orange-600">Entreprises</Link>
-              
-              <Link
-                href="/ajouter"
-                className="mt-4 bg-orange-600 text-white py-3 rounded-2xl text-center font-medium"
-              >
-                + Ajouter une entreprise
-              </Link>
-            </div>
-          </div>
-        )}
       </div>
     </nav>
   );
